@@ -5,9 +5,12 @@
 
 // Node structure for Fibonacci Heap
 typedef struct FibNode {
-    int key;
+    double k1;          // Primary key
+    double k2;          // Secondary key (tie-breaker)
+    void *payload;      // Pointer to the graph node (cell)
+    
     int degree;
-    int mark; // 1 if node has lost a child since it became a child of another node
+    int mark;
     struct FibNode *parent;
     struct FibNode *child;
     struct FibNode *left;
@@ -22,11 +25,14 @@ typedef struct FibHeap {
 
 // Function prototypes
 FibHeap* fib_heap_create();
-FibNode* fib_heap_insert(FibHeap *H, int key);
-int fib_heap_get_min(FibHeap *H);
-int fib_heap_extract_min(FibHeap *H);
-void fib_heap_decrease_key(FibHeap *H, FibNode *x, int k);
+FibNode* fib_heap_insert(FibHeap *H, double k1, double k2, void *payload);
+void* fib_heap_extract_min(FibHeap *H); // Returns payload
+int fib_heap_is_empty(FibHeap *H);
+void fib_heap_decrease_key(FibHeap *H, FibNode *x, double k1, double k2);
 void fib_heap_delete(FibHeap *H, FibNode *x);
 void fib_heap_free(FibHeap *H);
+
+// Helper to compare keys
+int compare_keys(double a1, double a2, double b1, double b2);
 
 #endif

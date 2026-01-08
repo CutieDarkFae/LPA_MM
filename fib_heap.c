@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <limits.h>
+#include <float.h>
 #include "fib_heap.h"
 
 // Helper function prototypes
@@ -10,6 +10,15 @@ static void fib_heap_link(FibHeap *H, FibNode *y, FibNode *x);
 static void cut(FibHeap *H, FibNode *x, FibNode *y);
 static void cascading_cut(FibHeap *H, FibNode *y);
 
+// Compare keys: returns -1 if A < B, 1 if A > B, 0 if equal
+int compare_keys(double a1, double a2, double b1, double b2) {
+    if (a1 < b1) return -1;
+    if (a1 > b1) return 1;
+    if (a2 < b2) return -1;
+    if (a2 > b2) return 1;
+    return 0;
+}
+
 FibHeap* fib_heap_create() {
     FibHeap *H = (FibHeap*)malloc(sizeof(FibHeap));
     H->min = NULL;
@@ -17,9 +26,11 @@ FibHeap* fib_heap_create() {
     return H;
 }
 
-FibNode* fib_heap_insert(FibHeap *H, int key) {
+FibNode* fib_heap_insert(FibHeap *H, double k1, double k2, void *payload) {
     FibNode *x = (FibNode*)malloc(sizeof(FibNode));
-    x->key = key;
+    x->k1 = k1;
+    x->k2 = k2;
+    x->payload = payload;
     x->degree = 0;
     x->mark = 0;
     x->parent = NULL;
@@ -36,7 +47,7 @@ FibNode* fib_heap_insert(FibHeap *H, int key) {
         H->min->right->left = x;
         H->min->right = x;
         
-        if (x->key < H->min->key) {
+        if (compare_keys(x->k1, x->k2, H->min->k1, H->min->k2) < 0) {
             H->min = x;
         }
     }
@@ -44,12 +55,11 @@ FibNode* fib_heap_insert(FibHeap *H, int key) {
     return x;
 }
 
-int fib_heap_get_min(FibHeap *H) {
-    if (H->min == NULL) return INT_MIN; // Or error code
-    return H->min->key;
+int fib_heap_is_empty(FibHeap *H) {
+    return H->min == NULL;
 }
 
-int fib_heap_extract_min(FibHeap *H) {
+void* fib_heap_extract_min(FibHeap *H) {
     FibNode *z = H->min;
     if (z != NULL) {
         // Add each child of z to the root list
@@ -57,16 +67,11 @@ int fib_heap_extract_min(FibHeap *H) {
             FibNode *child = z->child;
             do {
                 FibNode *next = child->right;
-                
-                // Reset parent pointer
                 child->parent = NULL;
-                
-                // Add to root list
                 child->left = H->min;
                 child->right = H->min->right;
                 H->min->right->left = child;
                 H->min->right = child;
-                
                 child = next;
             } while (child != z->child);
         }
@@ -82,61 +87,55 @@ int fib_heap_extract_min(FibHeap *H) {
             consolidate(H);
         }
         H->n--;
-        int minKey = z->key;
+        void *payload = z->payload;
         free(z);
-        return minKey;
+        return payload;
     }
-    return INT_MIN; // Empty heap
+    return NULL;
 }
 
 static void consolidate(FibHeap *H) {
-    // Determine max degree (approx log base phi of n)
-    int max_degree = (int)(log(H->n) / log(1.618)) + 2; 
-    // Usually safe upper bound is slightly higher or fixed for simplicity
-    // Let's use a safe static array size or dynamic if needed. 
-    // For n up to huge numbers, 100 is plenty.
+    if (H->n == 0) return;
+    
+    // Max degree bound: log_phi(N). For simple upper bound 100 is enough for huge N.
     int D = 100; 
     FibNode **A = (FibNode**)calloc(D, sizeof(FibNode*));
     
-    // Iterate through root list nodes
-    // Note: root list changes during consolidation, so we need to capture nodes carefully
-    FibNode *start = H->min;
-    if (!start) { free(A); return; }
-    
-    // Break the circular link for traversal to avoid infinite loops during linking
-    // Or simpler: collect all root nodes into an array/list first
+    // Count roots to iterate safely
     int num_roots = 0;
-    FibNode *count_node = H->min;
-    if (count_node) {
+    FibNode *x = H->min;
+    if (x) {
         num_roots++;
-        while (count_node->right != H->min) {
+        x = x->right;
+        while (x != H->min) {
             num_roots++;
-            count_node = count_node->right;
+            x = x->right;
         }
     }
-    
+
     FibNode **root_nodes = (FibNode**)malloc(num_roots * sizeof(FibNode*));
-    FibNode *curr = H->min;
+    x = H->min;
     for (int i = 0; i < num_roots; i++) {
-        root_nodes[i] = curr;
-        curr = curr->right;
+        root_nodes[i] = x;
+        x = x->right;
     }
 
     for (int i = 0; i < num_roots; i++) {
-        FibNode *x = root_nodes[i];
-        int d = x->degree;
-        while (A[d] != NULL) {
+        FibNode *w = root_nodes[i];
+        int d = w->degree;
+        while (d < D && A[d] != NULL) {
             FibNode *y = A[d];
-            if (x->key > y->key) {
-                FibNode *temp = x;
-                x = y;
+            // If w > y, swap
+            if (compare_keys(w->k1, w->k2, y->k1, y->k2) > 0) {
+                FibNode *temp = w;
+                w = y;
                 y = temp;
             }
-            fib_heap_link(H, y, x);
+            fib_heap_link(H, y, w);
             A[d] = NULL;
             d++;
         }
-        A[d] = x;
+        if(d < D) A[d] = w;
     }
     
     H->min = NULL;
@@ -151,7 +150,7 @@ static void consolidate(FibHeap *H) {
                 A[i]->right = H->min->right;
                 H->min->right->left = A[i];
                 H->min->right = A[i];
-                if (A[i]->key < H->min->key) {
+                if (compare_keys(A[i]->k1, A[i]->k2, H->min->k1, H->min->k2) < 0) {
                     H->min = A[i];
                 }
             }
@@ -163,11 +162,9 @@ static void consolidate(FibHeap *H) {
 }
 
 static void fib_heap_link(FibHeap *H, FibNode *y, FibNode *x) {
-    // Remove y from root list
     y->left->right = y->right;
     y->right->left = y->left;
     
-    // Make y a child of x
     y->parent = x;
     if (x->child == NULL) {
         x->child = y;
@@ -183,24 +180,24 @@ static void fib_heap_link(FibHeap *H, FibNode *y, FibNode *x) {
     y->mark = 0;
 }
 
-void fib_heap_decrease_key(FibHeap *H, FibNode *x, int k) {
-    if (k > x->key) {
-        // Error: new key is greater than current key
+void fib_heap_decrease_key(FibHeap *H, FibNode *x, double k1, double k2) {
+    if (compare_keys(k1, k2, x->k1, x->k2) > 0) {
+        // Only supports decrease key
         return;
     }
-    x->key = k;
+    x->k1 = k1;
+    x->k2 = k2;
     FibNode *y = x->parent;
-    if (y != NULL && x->key < y->key) {
+    if (y != NULL && compare_keys(x->k1, x->k2, y->k1, y->k2) < 0) {
         cut(H, x, y);
         cascading_cut(H, y);
     }
-    if (x->key < H->min->key) {
+    if (compare_keys(x->k1, x->k2, H->min->k1, H->min->k2) < 0) {
         H->min = x;
     }
 }
 
 static void cut(FibHeap *H, FibNode *x, FibNode *y) {
-    // Remove x from child list of y
     if (x == x->right) {
         y->child = NULL;
     } else {
@@ -211,14 +208,11 @@ static void cut(FibHeap *H, FibNode *x, FibNode *y) {
         }
     }
     y->degree--;
-    
-    // Add x to root list
     x->parent = NULL;
     x->left = H->min;
     x->right = H->min->right;
     H->min->right->left = x;
     H->min->right = x;
-    
     x->mark = 0;
 }
 
@@ -235,6 +229,12 @@ static void cascading_cut(FibHeap *H, FibNode *y) {
 }
 
 void fib_heap_delete(FibHeap *H, FibNode *x) {
-    fib_heap_decrease_key(H, x, INT_MIN);
+    fib_heap_decrease_key(H, x, -DBL_MAX, -DBL_MAX);
     fib_heap_extract_min(H);
+}
+
+void fib_heap_free(FibHeap *H) {
+    if (H) free(H);
+    // Note: Does not free payloads or recursively free nodes here for simplicity
+    // A full implementation would traverse and free.
 }
