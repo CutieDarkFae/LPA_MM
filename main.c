@@ -8,6 +8,7 @@
 // Grid dimensions
 #define ROWS 20
 #define COLS 20
+#define MAX_NEIGHBORS 4
 
 // Cell structure for LPA*
 typedef struct Cell {
@@ -16,8 +17,8 @@ typedef struct Cell {
     double rhs;
     double h; // heuristic
     FibNode *heap_node; // Pointer to node in heap, if present
-    struct Cell *predecessors[4]; // max 4 neighbors
-    struct Cell *successors[4];   // max 4 neighbors
+    struct Cell *predecessors[MAX_NEIGHBORS]; // max 4 neighbors
+    struct Cell *successors[MAX_NEIGHBORS;   // max 4 neighbors
     int num_succ;
     int num_pred;
 } Cell;
@@ -130,7 +131,7 @@ void initialize(Graph *G) {
     }
 
     // Set neighbors (Grid connectivity)
-    int dx[] = {0, 0, 1, -1};
+    int dx[] = {0, 0, 1, -1}; // these need to be expanded if MAX_NEIGHBORS chanages
     int dy[] = {1, -1, 0, 0};
     
     for(int i=0; i<ROWS; i++) {
@@ -148,7 +149,7 @@ void initialize(Graph *G) {
     }
 
     G->start = G->grid[0][0];
-    G->goal = G->grid[ROWS-1][COLS-1]; // Destination at bottom-right
+    G->goal = G->grid[ROWS/2][COLS/2]; // Destination in middle of grid
 
     // Init heuristic
     for(int i=0; i<ROWS; i++) {
