@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include <float.h>
 #include "fib_heap.h"
@@ -38,13 +39,38 @@ void initialize(Graph *G);
 void compute_shortest_path(Graph *G);
 void print_path(Graph *G);
 void update_edge_cost(Graph *G, int x1, int y1, int x2, int y2, double new_cost);
+int load_grid_from_csv(Graph *G, const char *filename);
+
+// Global grid costs
+double grid_costs[ROWS][COLS];
 
 double get_edge_cost(Cell *u, Cell *v) {
-    // For this simple grid, edge cost is always 1 unless blocked
-    // We can simulate obstacles by returning infinity
-    // Here we'll just assume uniform cost of 1.0 for simplicity in this function
-    // but the main loop can simulate changes.
-    return 1.0; 
+    // Return the cost stored in our grid_costs matrix
+    return grid_costs[v->x][v->y]; 
+}
+
+int load_grid_from_csv(Graph *G, const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("Failed to open CSV file");
+        return 0;
+    }
+
+    char line[1024];
+    int row = 0;
+    while (fgets(line, sizeof(line), file) && row < ROWS) {
+        char *token = strtok(line, ",");
+        int col = 0;
+        while (token && col < COLS) {
+            grid_costs[row][col] = atof(token);
+            token = strtok(NULL, ",");
+            col++;
+        }
+        row++;
+    }
+
+    fclose(file);
+    return 1;
 }
 
 double heuristic(Cell *a, Cell *b) {
@@ -97,6 +123,9 @@ void initialize(Graph *G) {
             c->num_succ = 0;
             c->num_pred = 0;
             G->grid[i][j] = c;
+            
+            // Default cost if CSV not loaded or for initial state
+            if (grid_costs[i][j] <= 0) grid_costs[i][j] = 1.0;
         }
     }
 
@@ -202,9 +231,18 @@ void print_path(Graph *G) {
 }
 
 int main() {
+    Graph G;
+    
+    // Try to load from grid.csv if it exists
+    printf("Attempting to load grid from grid.csv...\n");
+    if (load_grid_from_csv(&G, "grid.csv")) {
+        printf("Grid loaded successfully.\n");
+    } else {
+        printf("Proceeding with default costs.\n");
+    }
+
     printf("Initializing LPA* on %dx%d grid...\n", ROWS, COLS);
     
-    Graph G;
     initialize(&G);
     
     printf("Computing initial path...\n");
