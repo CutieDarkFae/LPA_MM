@@ -18,7 +18,7 @@ typedef struct Cell {
     double h; // heuristic
     FibNode *heap_node; // Pointer to node in heap, if present
     struct Cell *predecessors[MAX_NEIGHBORS]; // max 4 neighbors
-    struct Cell *successors[MAX_NEIGHBORS;   // max 4 neighbors
+    struct Cell *successors[MAX_NEIGHBORS];   // max 4 neighbors
     int num_succ;
     int num_pred;
 } Cell;
