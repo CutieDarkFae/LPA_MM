@@ -266,9 +266,9 @@ void print_maze(Graph *G) {
                 }
             }
             if (e) {
-                printf("|");
-            } else {
                 printf(" ");
+            } else {
+                printf("|");
             }
         }
         // print bottom wall
@@ -283,9 +283,9 @@ void print_maze(Graph *G) {
                 }
             }
             if (s) {
-                printf("---+");
-            } else {
                 printf("   +");
+            } else {
+                printf("---+");
             }
         }
     }
