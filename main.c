@@ -6,9 +6,15 @@
 #include "fib_heap.h"
 
 // Grid dimensions
-#define ROWS 20
-#define COLS 20
+#define ROWS 32
+#define COLS 32
+// How many neighbors each cell can have
 #define MAX_NEIGHBORS 4
+// Wall definitions
+#define NORTH_WALL 1
+#define EAST_WALL 2
+#define SOUTH_WALL 4
+#define WEST_WALL 8
 
 // Cell structure for LPA*
 typedef struct Cell {
@@ -39,13 +45,16 @@ double heuristic(Cell *a, Cell *b);
 void initialize(Graph *G);
 void compute_shortest_path(Graph *G);
 void print_path(Graph *G);
+void print_maze(Graph *G);
 void update_edge_cost(Graph *G, int x1, int y1, int x2, int y2, double new_cost);
 int load_grid_from_csv(Graph *G, const char *filename);
 
 // Global grid costs
-double grid_costs[ROWS][COLS];
+int grid_costs[ROWS][COLS];
 
-double get_edge_cost(Cell *u, Cell *v) {
+int walls[] = {EAST_WALL, WEST_WALL, NORTH_WALL, SOUTH_WALL};
+
+int get_edge_cost(Cell *u, Cell *v) {
     // Return the cost stored in our grid_costs matrix
     return grid_costs[v->x][v->y]; 
 }
@@ -63,7 +72,7 @@ int load_grid_from_csv(Graph *G, const char *filename) {
         char *token = strtok(line, ",");
         int col = 0;
         while (token && col < COLS) {
-            grid_costs[row][col] = atof(token);
+            grid_costs[row][col] = atoi(token);
             token = strtok(NULL, ",");
             col++;
         }
@@ -149,7 +158,7 @@ void initialize(Graph *G) {
     }
 
     G->start = G->grid[0][0];
-    G->goal = G->grid[ROWS/2][COLS/2]; // Destination in middle of grid
+    G->goal = G->grid[ROWS-1][COLS-1]; // Destination at bottom-right
 
     // Init heuristic
     for(int i=0; i<ROWS; i++) {
@@ -228,7 +237,29 @@ void print_path(Graph *G) {
         curr = next;
         steps++;
     }
-    printf("(%d,%d)\n", G->start->x, G->start->y);
+    printf("(%d,%d)\n", G->start->y, G->start->x);
+}
+
+void print_maze(Graph *G) {
+    printf("\n--- Maze Visualization (Weights) ---\n");
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < COLS; j++) {
+            if (grid_costs[i][j] >= 100) {
+                printf("[ # ] "); // Obstacle
+            } else {
+                printf("[%2.0f] ", grid_costs[i][j]);
+            }
+        }
+        printf("\n");
+    }
+
+    printf("\n--- Cell Neighbors Example (Cell 0,0) ---\n");
+    Cell *c = G->grid[0][0];
+    printf("Cell (0,0) successors: ");
+    for (int i = 0; i < c->num_succ; i++) {
+        printf("(%d,%d) ", c->successors[i]->x, c->successors[i]->y);
+    }
+    printf("\n");
 }
 
 int main() {
@@ -236,7 +267,7 @@ int main() {
     
     // Try to load from grid.csv if it exists
     printf("Attempting to load grid from grid.csv...\n");
-    if (load_grid_from_csv(&G, "grid.csv")) {
+    if (load_grid_from_csv(&G, "maze_01.csv")) {
         printf("Grid loaded successfully.\n");
     } else {
         printf("Proceeding with default costs.\n");
@@ -246,7 +277,9 @@ int main() {
     
     initialize(&G);
     
-    printf("Computing initial path...\n");
+    print_maze(&G);
+
+    printf("\nComputing initial path...\n");
     compute_shortest_path(&G);
     print_path(&G);
 
