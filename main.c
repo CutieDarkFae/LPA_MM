@@ -158,7 +158,7 @@ void initialize(Graph *G) {
     }
 
     G->start = G->grid[0][0];
-    G->goal = G->grid[ROWS-1][COLS-1]; // Destination at bottom-right
+    G->goal = G->grid[ROWS/2][COLS/2]; // Destination at middle
 
     // Init heuristic
     for(int i=0; i<ROWS; i++) {
