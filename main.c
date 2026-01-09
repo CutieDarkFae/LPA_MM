@@ -85,6 +85,7 @@ int load_grid_from_csv(Graph *G, const char *filename) {
 
 double heuristic(Cell *a, Cell *b) {
     // Manhattan distance
+    // TODO fix this to be wall aware across the route
     return fabs((double)a->x - b->x) + fabs((double)a->y - b->y);
 }
 
@@ -139,6 +140,7 @@ void initialize(Graph *G) {
         }
     }
 
+    // TODO delete all this
     // Set neighbors (Grid connectivity)
     int dx[] = {0, 0, 1, -1}; // these need to be expanded if MAX_NEIGHBORS chanages
     int dy[] = {1, -1, 0, 0};
@@ -150,8 +152,10 @@ void initialize(Graph *G) {
                 int ni = i + dx[k];
                 int nj = j + dy[k];
                 if(ni >= 0 && ni < ROWS && nj >= 0 && nj < COLS) {
-                    c->successors[c->num_succ++] = G->grid[ni][nj];
-                    c->predecessors[c->num_pred++] = G->grid[ni][nj];
+                    if(grid_costs[i][k] & walls[k] == 0) {
+                        c->successors[c->num_succ++] = G->grid[ni][nj];
+                        c->predecessors[c->num_pred++] = G->grid[ni][nj];
+                    }
                 }
             }
         }
