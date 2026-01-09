@@ -283,17 +283,21 @@ int main() {
     compute_shortest_path(&G);
     print_path(&G);
 
-    // Simulate change: "Obstacle" appears or cost increases significantly
-    // Let's block the direct path partially by increasing costs of some nodes
-    // This is just a mock update to demonstrate the 'update_vertex' logic
-    printf("\nSimulating edge cost change (obstacle at 2,2)...\n");
+    // Simulate change: Obstacle at (2,2)
+    printf("\n--- Simulating Dynamic Change ---\n");
+    printf("Adding obstacle at (2,2)...\n");
+    grid_costs[2][2] = 100.0;
     
-    // In real LPA*, edge changes trigger update_vertex on the destination of the edge
-    // Changing cost of edges entering (2,2)
-    // For simplification here, we just re-run update_vertex on affected nodes
-    // assuming 'get_edge_cost' would now return something different.
-    // Since get_edge_cost is hardcoded above, we won't see actual change unless we change logic.
-    // This serves as the structural implementation of the algorithm.
+    // In LPA*, when an edge (u, v) changes, we call update_vertex(v)
+    // We update the node (2,2) itself and its successors
+    update_vertex(&G, G.grid[2][2]);
+    for (int i = 0; i < G.grid[2][2]->num_succ; i++) {
+        update_vertex(&G, G.grid[2][2]->successors[i]);
+    }
+
+    printf("Re-computing path...\n");
+    compute_shortest_path(&G);
+    print_path(&G);
     
     return 0;
 }
