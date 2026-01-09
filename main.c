@@ -241,23 +241,53 @@ void print_path(Graph *G) {
 }
 
 void print_maze(Graph *G) {
-    printf("\n--- Maze Visualization (Weights) ---\n");
+    // print top wall
+    printf("+");
+    for (int j = 0; j < COLS; j++) {
+        printf("---+");
+    }
+    // print the rest of the maze
     for (int i = 0; i < ROWS; i++) {
+        printf("\n|");
+        // print cell contents and eastern wall
         for (int j = 0; j < COLS; j++) {
-            if (grid_costs[i][j] >= 100) {
-                printf("[ # ] "); // Obstacle
+            // Check if we have a weight here
+            if (G->grid[i][j]->h == 0) {
+                printf("   ");
             } else {
-                printf("[%2.0f] ", grid_costs[i][j]);
+                printf("%03d", G->grid[i][j]->h);
+            }
+            int e = 1;
+            for (int k = 0; k < G->grid[i][j]->num_succ; k++) {
+                Cell *succ = G->grid[i][j]->successors[k];
+                // Check if successor is to the right
+                if (succ->x == i && succ->y == j + 1) {
+                    e = 0;
+                }
+            }
+            if (e) {
+                printf("|");
+            } else {
+                printf(" ");
             }
         }
-        printf("\n");
-    }
-
-    printf("\n--- Cell Neighbors Example (Cell 0,0) ---\n");
-    Cell *c = G->grid[0][0];
-    printf("Cell (0,0) successors: ");
-    for (int i = 0; i < c->num_succ; i++) {
-        printf("(%d,%d) ", c->successors[i]->x, c->successors[i]->y);
+        // print bottom wall
+        printf("\n+");
+        for (int j = 0; j < COLS; j++) {
+            int s = 1;
+            for (int k = 0; k < G->grid[i][j]->num_succ; k++) {
+                Cell *succ = G->grid[i][j]->successors[k];
+                // Check if successor is below
+                if (succ->x == i + 1 && succ->y == j) {
+                    s = 0;
+                }
+            }
+            if (s) {
+                printf("---+");
+            } else {
+                printf("   +");
+            }
+        }
     }
     printf("\n");
 }
@@ -280,22 +310,6 @@ int main() {
     print_maze(&G);
 
     printf("\nComputing initial path...\n");
-    compute_shortest_path(&G);
-    print_path(&G);
-
-    // Simulate change: Obstacle at (2,2)
-    printf("\n--- Simulating Dynamic Change ---\n");
-    printf("Adding obstacle at (2,2)...\n");
-    grid_costs[2][2] = 100.0;
-    
-    // In LPA*, when an edge (u, v) changes, we call update_vertex(v)
-    // We update the node (2,2) itself and its successors
-    update_vertex(&G, G.grid[2][2]);
-    for (int i = 0; i < G.grid[2][2]->num_succ; i++) {
-        update_vertex(&G, G.grid[2][2]->successors[i]);
-    }
-
-    printf("Re-computing path...\n");
     compute_shortest_path(&G);
     print_path(&G);
     
